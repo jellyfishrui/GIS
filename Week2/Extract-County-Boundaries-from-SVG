@@ -1,0 +1,159 @@
+"""
+Week 2 Practice Project for Python Data Visualization
+Rice University - Coursera
+Compute a county centers from an SVG image of USA that includes county boundaries
+Output a CSV file with FIPS code and county centers
+"""
+
+
+import csv
+import math
+from xml.dom import minidom
+
+# Parse the XML in the USA County svg file
+# Extract county attributes
+# Derive from example code - - https://stackoverflow.com/questions/15857818/python-svg-parser
+
+def get_county_attributes(svg_file):
+    """
+    Given the SVG file associate with string svg_file name
+    Extract county attributes from associated XML
+    Return a list of tuples consisting of FIPS codes(strings) and county boundaries (strings)
+    :param svg_file:
+    :return:
+    """
+    doc = minidom.parse(svg_file)
+    county_attribute_list = [(path.getAttribute("id"), path.getAttribute("d"))
+                             for path in doc.getElementsByTagName("path")]
+    doc.unlink()
+    return county_attribute_list
+
+# Test
+# list = get_county_attributes("County_USA_2014.svg")
+# print(list)
+
+def test_get_attributes(svg_file):
+    county_attribute_list = get_county_attributes(svg_file)
+    print(len(county_attribute_list))
+    print(county_attribute_list[30])
+    print() # A blank line
+    print(county_attribute_list[100])
+    print()
+    print(county_attribute_list[1000])
+
+# test_get_attributes("County_USA_2014.svg")
+
+# Output from tests
+# 3143
+# ('FIPS_01045', 'm405.64 251.83 3.611-.415.428 3.908.045.369-.698.599-.167.015-.496-.046-.285-.077-.374-.089-.175-.009-.185.009-.257.085-.062.054-.389.978-.883.081-.558-5.413z')
+#
+# ('FIPS_05071', 'm317.44 203.82 1.839.023 3.701.346.017 1.703-.536 1.097-.563.594-.19.005.024 1.852-1.875-1.076-.443.175-.794.253-1.202.139z')
+#
+# ('FIPS_21119', 'm425.9 172.67 1.006.149.74.41.093.145.05.423-.022.351.184.54.054.055.226.131.194.086-.198.207-.677.23-.698.486-.19.244-.202.203-.397.315-.219-.003-.183-.127-1.621-2.525 1.599-1.5z')
+
+# Code to compute the center of a county
+
+def get_boundary_coordinates(boundary_data):
+    """
+    Given the county boundary data as a string,
+    Return the county boundary as a list of coordinates
+    Ignore "M", "L", "z"
+    :param boundary_data:
+    :return:
+    """
+    # Replace "z" and "M" with "L" first and split with "L"
+    boundary_data = boundary_data.replace("z", "L")
+    boundary_data = boundary_data.replace("M", "L")
+    boundary_list = boundary_data.split("L")[1:]
+    print(boundary_list)
+
+    boundary_coordinates = []
+    #(xcoord, ycoord) = (0.0, 0.0)
+    for entry in boundary_list:
+        temp = entry.split(",")
+        if len(temp) == 2:
+            (xcoord, ycoord) = temp
+        else:
+            print(len(temp))
+            print(temp)
+        boundary_coordinates.append((float(xcoord), float(ycoord)))
+    return boundary_coordinates
+
+# Estimate a county center from a list of coordinates on county boundary
+
+def dist(pt1, pt2):
+    """
+    Compute Euclidean distance between two points
+    :param pt1:
+    :param pt2:
+    :return:
+    """
+    return math.sqrt((pt1[0] - pt2[0]) ** 2 + (pt1[1] - pt2[1]) ** 2)
+
+def compute_county_center(boundary_coordinates):
+    """
+    Given a list of coordinates (tupes of two floats) on county boundary
+    Return an estimate of the center of the county as a tupe of two floats
+    Assume the list of coordinates forms a closed polygon with first and last points repeated
+    :param boundary_coordinates:
+    :return:
+    """
+    centroid = [0, 0]
+    perimeter = 0
+    for idx in range(len(boundary_coordinates) - 1):
+        edge_length = dist(boundary_coordinates[idx], boundary_coordinates[idx + 1])
+        centroid[0] += (boundary_coordinates[idx][0] + boundary_coordinates[idx + 1][0]) * 0.5
+        centroid[1] += (boundary_coordinates[idx][1] + boundary_coordinates[idx + 1][1]) * 0.5
+        perimeter += edge_length
+    return [(centroid[0] / perimeter), (centroid[1] / perimeter)]
+
+BOUNDARY_STRING1 = "M 412.47298,198.204 L 412.05498,198.597 L 411.68998,198.637 L 410.44998,197.371 L 409.73798,196.51 L 410.65298,195.31 L 412.14998,194.265 L 412.94598,194.016 L 413.28898,193.711 L 413.91998,193.075 L 414.86198,194.775 L 414.97098,194.936 L 414.77698,194.878 L 414.28998,195.071 L 412.64998,197.641 L 412.47298,198.204 z M 412.47298,198.204 L 412.47298,198.204"
+BOUNDARY_STRING2 = "M 124.80274,305.35735 L 123.03975,304.03435 L 123.48174,303.37435 L 124.36175,303.59335 L 125.02275,304.03435 L 125.46275,305.13535 L 124.80274,305.35735 M 125.90375,309.76335 L 126.12375,309.98335 L 125.02275,310.64335 L 124.58274,309.32235 L 123.92075,308.66035 L 123.92075,309.10235 L 123.70075,309.10235 L 121.71875,308.66035 L 121.71875,308.88135 L 122.59975,308.88135 L 123.92075,309.32235 L 124.80274,310.64335 L 123.48174,311.96535 L 122.59975,311.52535 L 122.15875,311.52535 L 121.49775,311.30535 L 119.29575,310.42235 L 120.17675,309.54235 L 121.49775,307.55935 L 122.15875,307.33935 L 122.15875,306.89835 L 124.14175,306.89835 L 125.02275,307.55935 L 124.80274,308.66035 L 125.90375,308.88135 L 126.34474,309.32235 L 125.90375,309.76335 M 134.27575,313.50735 L 133.61475,313.50735 L 133.39675,313.94835 L 133.17575,312.84635 L 132.07475,311.74535 L 132.07475,311.30535 L 131.85275,310.64335 L 131.85275,310.42235 L 132.29375,308.88135 L 135.81775,311.74535 L 134.93875,311.96535 L 134.49675,312.62535 L 134.27575,313.50735 M 129.20874,310.42235 L 129.86974,309.98335 L 129.86974,310.20135 L 131.63375,311.96535 L 131.19175,311.96535 L 130.53075,311.08435 L 130.31075,311.30535 L 131.85275,312.84635 L 132.07475,313.28835 L 131.63375,313.94835 L 131.63375,314.60935 L 130.97074,315.70935 L 130.31075,314.83035 L 130.31075,313.50735 L 129.20874,312.62535 L 128.32674,310.86435 L 127.44574,309.76335 L 127.44574,309.54235 L 127.66674,309.54235 L 128.32674,310.20135 L 128.54674,310.86435 L 128.98874,310.86435 L 128.98874,310.64335 L 129.20874,310.42235 M 126.78574,312.62535 L 125.90375,312.40635 L 125.90375,313.28835 L 125.02275,313.50735 L 124.36175,313.28835 L 124.14175,312.62535 L 124.36175,311.52535 L 125.24275,311.30535 L 125.68474,310.86435 L 128.10674,311.30535 L 128.32674,311.74535 L 128.54674,312.40635 L 128.32674,312.62535 L 127.88674,312.84635 L 126.78574,312.62535"
+
+def test_boundary_code():
+    """
+    Test out code fo r computing coordinates for county coundaries
+    :return:
+    """
+    boundary_coords1 = get_boundary_coordinates(BOUNDARY_STRING1)
+    boundary_coords2 = get_boundary_coordinates(BOUNDARY_STRING2)
+    print(boundary_coords1)
+    print(boundary_coords2)
+    print(compute_county_center(boundary_coords1))
+    print(compute_county_center(boundary_coords2))
+
+# test_boundary_code()
+
+# Output for testing code
+# [(412.47298, 198.204), (412.05498, 198.597), (411.68998, 198.637), (410.44998, 197.371), (409.73798, 196.51), (410.65298, 195.31), (412.14998, 194.265), (412.94598, 194.016), (413.28898, 193.711), (413.91998, 193.075), (414.86198, 194.775), (414.97098, 194.936), (414.77698, 194.878), (414.28998, 195.071), (412.64998, 197.641), (412.47298, 198.204), (412.47298, 198.204), (412.47298, 198.204), (412.47298, 198.204)]
+# [(124.80274, 305.35735), (123.03975, 304.03435), (123.48174, 303.37435), (124.36175, 303.59335), (125.02275, 304.03435), (125.46275, 305.13535), (124.80274, 305.35735), (125.90375, 309.76335), (126.12375, 309.98335), (125.02275, 310.64335), (124.58274, 309.32235), (123.92075, 308.66035), (123.92075, 309.10235), (123.70075, 309.10235), (121.71875, 308.66035), (121.71875, 308.88135), (122.59975, 308.88135), (123.92075, 309.32235), (124.80274, 310.64335), (123.48174, 311.96535), (122.59975, 311.52535), (122.15875, 311.52535), (121.49775, 311.30535), (119.29575, 310.42235), (120.17675, 309.54235), (121.49775, 307.55935), (122.15875, 307.33935), (122.15875, 306.89835), (124.14175, 306.89835), (125.02275, 307.55935), (124.80274, 308.66035), (125.90375, 308.88135), (126.34474, 309.32235), (125.90375, 309.76335), (134.27575, 313.50735), (133.61475, 313.50735), (133.39675, 313.94835), (133.17575, 312.84635), (132.07475, 311.74535), (132.07475, 311.30535), (131.85275, 310.64335), (131.85275, 310.42235), (132.29375, 308.88135), (135.81775, 311.74535), (134.93875, 311.96535), (134.49675, 312.62535), (134.27575, 313.50735), (129.20874, 310.42235), (129.86974, 309.98335), (129.86974, 310.20135), (131.63375, 311.96535), (131.19175, 311.96535), (130.53075, 311.08435), (130.31075, 311.30535), (131.85275, 312.84635), (132.07475, 313.28835), (131.63375, 313.94835), (131.63375, 314.60935), (130.97074, 315.70935), (130.31075, 314.83035), (130.31075, 313.50735), (129.20874, 312.62535), (128.32674, 310.86435), (127.44574, 309.76335), (127.44574, 309.54235), (127.66674, 309.54235), (128.32674, 310.20135), (128.54674, 310.86435), (128.98874, 310.86435), (128.98874, 310.64335), (129.20874, 310.42235), (126.78574, 312.62535), (125.90375, 312.40635), (125.90375, 313.28835), (125.02275, 313.50735), (124.36175, 313.28835), (124.14175, 312.62535), (124.36175, 311.52535), (125.24275, 311.30535), (125.68474, 310.86435), (128.10674, 311.30535), (128.32674, 311.74535), (128.54674, 312.40635), (128.32674, 312.62535), (127.88674, 312.84635), (126.78574, 312.62535)]
+# [468.45487785066723, 222.714779061283]
+# [102.88738547844511, 250.88199941490356]
+
+# Put it all together to read county attributes from SVG files
+# Compute county centers, write FIPS codes and county centers to CSV files
+
+def process_county_attributes(svg_file, csv_file_name):
+    """
+    Given SVG file name (as string), extract county attributes (FIPS codes and county boundary coordinates)
+    Then compute county cnters and write a CSV file with columns corresponding to FIPS code, and coordinates of centers
+    :param svg_file:
+    :param csv_file_name:
+    :return:
+    """
+
+    #Extract county attributes from SVG file
+    county_attribute_list = get_county_attributes(svg_file)
+    print("Processed", len(county_attribute_list), "entries")
+
+    # Output CSV file
+    with open(csv_file_name, "w", newline = "") as csv_file:
+        csv_writer = csv.writer(csv_file, delimiter = ",", quoting = csv.QUOTE_MINIMAL)
+        for (fips, boundary) in county_attribute_list:
+            boundary_coordinates = get_boundary_coordinates(boundary)
+            center = compute_county_center(boundary_coordinates)
+            csv_writer.writerow([fips, center[0], center[1]])
+    print("Wrote csv file", csv_file_name)
+
+# Output the csv file should have 3143 rows
+process_county_attributes("County_USA_2014.svg", "USA_County_with_FIPS_and_centers.csv")
