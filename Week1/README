@@ -1,0 +1,8 @@
+Draw a county-level map of the USA in matplotlib
+
+Our task is to locate a map that includes the boundaries of the counties of the USA. Based on some Google searching, 
+this map from wikimedia.org is a suitable candidate. The original map is stored in SVG format (scalable vector graphics) in which 
+each line in the map represented in terms of precise mathematical coordinates. The advantage of this vector representation is that the 
+map can be drawn as a bit-mapped (pixel-based) image of any resolution without a loss of accuracy.
+
+The matplotlib code will draw these PNG images since matplotlib does not support drawing of SVG images. 
